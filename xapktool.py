@@ -41,7 +41,7 @@ class XAPK:
             try:
                 self.icon = self.apk.get_file(self.apk.get_app_icon(max_dpi=65534))
             except Exception as e:
-                print("Skip icon: {e}")
+                print(f"Skip icon: {e}")
 
             print("Verifying APK and OBB...")
             apk_package_name = self.apk.get_package()
