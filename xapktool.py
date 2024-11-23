@@ -37,11 +37,26 @@ class XAPK:
                 raise FileNotFoundError("No OBB and split files found in the specified directory.")
 
             self.apk = APK(self.apk_src)
-            self.manifest = self.make_manifest()
-            try:
-                self.icon = self.apk.get_file(self.apk.get_app_icon(max_dpi=65534))
-            except Exception as e:
-                print(f"Skip icon: {e}")
+
+            manifest_path = PurePath(self.folder).joinpath('manifest.json')
+            if not os.path.isfile(manifest_path):
+                manifest = self.make_manifest()
+                with open(manifest_path, 'w') as file:
+                    json.dump(manifest, file, indent=4)
+                print('Manifest: OK')
+            self.manifest = manifest_path
+            
+            icon_path = PurePath(self.folder).joinpath('icon.png')
+            self.icon = icon_path
+            if not os.path.isfile(icon_path):
+                try:
+                    icon = self.apk.get_file(self.apk.get_app_icon(max_dpi=65533))
+                    with open(icon_path, 'wb') as file:
+                        file.write(icon)
+                    print('Icon: OK')
+                except Exception as e:
+                    print(f"Skip icon: {e}")
+                    self.icon = None
 
             print("Verifying APK and OBB...")
             apk_package_name = self.apk.get_package()
@@ -136,18 +151,11 @@ class XAPK:
                     print(f'{split_config_file.name}: OK')
 
                 if self.icon:
-                    print('Creating icon in temp directory...')
-                    icon = self.icon
-                    icon_dest = PurePath(zip_dir).joinpath('icon.png')
-                    with open(icon_dest, 'wb') as iconfile:
-                        iconfile.write(icon)
-                    print('Icon: OK')
+                    print('Copying icon in temp directory...')
+                    shutil.copy2(self.icon, zip_dir)
 
-                print('Creating manifest in temp directory...')
-                manifest_dest = PurePath(zip_dir).joinpath('manifest.json')
-                with open(manifest_dest, 'w') as manifestfile:
-                    json.dump(self.manifest, manifestfile, indent=4)
-                print('Manifest: OK')
+                print('Copying manifest in temp directory...')
+                shutil.copy2(self.manifest, zip_dir)
 
                 print('Creating XAPK archive...')
                 with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zfd:
